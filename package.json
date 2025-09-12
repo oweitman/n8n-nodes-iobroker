@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-iobroker",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Community nodes for n8n  to integrate ioBroker into your workflows.",
   "keywords": [
     "n8n-community-node-package"
@@ -20,7 +20,8 @@
   },
   "main": "index.js",
   "scripts": {
-    "build": "npx rimraf dist && tsc && gulp build:icons",
+    "build": "npx rimraf dist && tsc && gulp build:icons && npm run bundle:socket",
+    "bundle:socket": "esbuild dist/nodes/Iobroker/IoBrokerRead.node.js dist/nodes/Iobroker/IoBrokerOutput.node.js dist/nodes/Iobroker/IoBrokerTrigger.node.js dist/nodes/Iobroker/iobrokerConnection.js --bundle --platform=node --format=cjs --sourcemap --outbase=dist --outdir=dist --external:n8n-workflow --external:@iobroker/types --external:ws --allow-overwrite",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials package.json",
@@ -50,15 +51,16 @@
     "@typescript-eslint/parser": "~8.32.0",
     "eslint": "^8.57.0",
     "eslint-plugin-n8n-nodes-base": "^1.16.3",
+    "esbuild": "^0.25.9",
     "gulp": "^5.0.0",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "@iobroker/socket-client-backend": "file:../socket-client/backend"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
   },
   "dependencies": {
-    "@iobroker/socket-client-backend": "file:../socket-client/backend",
     "@iobroker/types": "^7.0.7",
     "ws": "^8.18.3"
   }
