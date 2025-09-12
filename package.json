@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-iobroker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Community nodes for n8n  to integrate ioBroker into your workflows.",
   "keywords": [
     "n8n-community-node-package"
@@ -37,9 +37,9 @@
       "dist/credentials/IoBrokerApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/IoBroker/Read/IoBrokerRead.node.js",
-      "dist/nodes/IoBroker/Read/IoBrokerOutput.node.js",
-      "dist/nodes/IoBroker/Read/IoBrokerTrigger.node.js"
+      "dist/nodes/IoBroker/IoBrokerRead.node.js",
+      "dist/nodes/IoBroker/IoBrokerOutput.node.js",
+      "dist/nodes/IoBroker/IoBrokerTrigger.node.js"
     ]
   },
   "devDependencies": {
