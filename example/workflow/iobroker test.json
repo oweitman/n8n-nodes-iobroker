@@ -1,0 +1,262 @@
+{
+  "name": "iobroker test",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        -416
+      ],
+      "id": "1e123dba-d8c9-4d7a-be5d-0eb136df9bad",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "oid": "0_userdata.0.n8n.test1"
+      },
+      "type": "CUSTOM.ioBrokerRead",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -416
+      ],
+      "id": "d844eb99-3fab-46b7-8c7e-cb00121821f9",
+      "name": "ioBroker Read State",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "type": "object",
+        "oid": "0_userdata.0.n8n.test1"
+      },
+      "type": "CUSTOM.ioBrokerRead",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -416
+      ],
+      "id": "738e98ca-e74a-44aa-8cc8-a48d7c272f70",
+      "name": "ioBroker Read Object",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "oid": "0_userdata.0.n8n.test2",
+        "val": "xyz"
+      },
+      "type": "CUSTOM.ioBrokerOutput",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -416
+      ],
+      "id": "21a9b479-663b-4046-999a-4ea83024de78",
+      "name": "ioBroker Output State",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "oid": "0_userdata.0.n8n.test1"
+      },
+      "type": "CUSTOM.ioBrokerTrigger",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        -208
+      ],
+      "id": "d6001e90-8236-4f95-888c-0eecf631109d",
+      "name": "ioBroker Trigger state",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "oid": "0_userdata.0.n8n.result",
+        "val": "={{ $json.val }}"
+      },
+      "type": "CUSTOM.ioBrokerOutput",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -208
+      ],
+      "id": "df6bb996-0330-4418-aea8-3408856cc35c",
+      "name": "ioBroker Output state",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "type": "log"
+      },
+      "type": "CUSTOM.ioBrokerRead",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -416
+      ],
+      "id": "8c7da940-ef86-4ff5-86dd-fdf3716f798e",
+      "name": "ioBroker Read log",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "type": "devices"
+      },
+      "type": "CUSTOM.ioBrokerRead",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -416
+      ],
+      "id": "89f976e4-8e86-4ca8-b8b3-55494f291ce5",
+      "name": "ioBroker Read devices",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "type": "rooms"
+      },
+      "type": "CUSTOM.ioBrokerRead",
+      "typeVersion": 1,
+      "position": [
+        336,
+        -416
+      ],
+      "id": "c75a1fda-4ecf-45b0-ac0d-036a6e272275",
+      "name": "ioBroker Read rooms",
+      "credentials": {
+        "iobrokerApi": {
+          "id": "P0gghqvZElhwfFLJ",
+          "name": "Iobroker Test"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "ioBroker Read State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ioBroker Read State": {
+      "main": [
+        [
+          {
+            "node": "ioBroker Read Object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ioBroker Read Object": {
+      "main": [
+        [
+          {
+            "node": "ioBroker Output State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ioBroker Trigger state": {
+      "main": [
+        [
+          {
+            "node": "ioBroker Output state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ioBroker Output State": {
+      "main": [
+        [
+          {
+            "node": "ioBroker Read log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ioBroker Read log": {
+      "main": [
+        [
+          {
+            "node": "ioBroker Read devices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ioBroker Read devices": {
+      "main": [
+        [
+          {
+            "node": "ioBroker Read rooms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9283b7f7-109b-4290-81c6-8ed6350d5555",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "80c6d0c98b98eb77183ba85e00d58bab7fef9b7d7eca27dc8f419fc527db782b"
+  },
+  "id": "ur0C14RM0uHYngAp",
+  "tags": []
+}
