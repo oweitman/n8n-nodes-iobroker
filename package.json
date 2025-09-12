@@ -42,6 +42,9 @@
       "dist/nodes/Iobroker/IoBrokerTrigger.node.js"
     ]
   },
+  "bundledDependencies": [
+    "@iobroker/socket-client-backend"
+  ],
   "devDependencies": {
     "@types/ws": "^8.18.1",
     "@typescript-eslint/parser": "~8.32.0",
