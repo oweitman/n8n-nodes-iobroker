@@ -8,3 +8,4 @@ yarn.lock
 .vscode/launch.json
 backup_nodes
 backup_credentials
+.vscode/secret.txt
