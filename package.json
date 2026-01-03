@@ -54,14 +54,18 @@
     "esbuild": "^0.25.9",
     "gulp": "^5.0.0",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.2",
-    "@iobroker/socket-client-backend": "file:../socket-client/backend"
+    "typescript": "^5.8.2"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
   },
   "dependencies": {
+    "@iobroker/socket-client-backend": "^5.0.3",
     "@iobroker/types": "^7.0.7",
     "ws": "^8.18.3"
+  },
+  "overrides": {
+    "axios": "^1.13.2",
+    "form-data": "^4.0.5"
   }
 }
