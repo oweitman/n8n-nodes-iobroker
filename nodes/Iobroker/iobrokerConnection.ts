@@ -60,12 +60,12 @@ export function connectIobroker(host: string, port: number): Promise<AdminConnec
 			port: port,
 			doNotLoadAllObjects: true,
 			doNotLoadACL: true,
-			onProgress: (progress) => console.log(`Progress: ${progress}`),
-			onReady: async (_objects) => {
+			onProgress: (progress: number) => console.log(`Progress: ${progress}`),
+			onReady: async (_objects: any) => {
 				resolve(iobsocket);
 			},
-			onLog: (message) => console.log(`Log: ${message.message}`),
-			onError: (error) => {
+			onLog: (message: any) => console.log(`Log: ${message.message}`),
+			onError: (error: any) => {
 				console.error(`Error: ${error}`);
 			},
 			connect: (url: string): any => {
@@ -101,12 +101,12 @@ export function testConnectIobroker(host: string, port: number): Promise<AdminCo
 			port: port,
 			doNotLoadAllObjects: true,
 			doNotLoadACL: true,
-			onProgress: (progress) => console.log(`Progress: ${progress}`),
-			onReady: async (_objects) => {
+			onProgress: (progress: number) => console.log(`Progress: ${progress}`),
+			onReady: async (_objects: any) => {
 				resolve(iobsocket);
 			},
-			onLog: (message) => console.log(`Log: ${message.message}`),
-			onError: (error) => {
+			onLog: (message: any) => console.log(`Log: ${message.message}`),
+			onError: (error: any) => {
 				console.error(`Error: ${error}`);
 			},
 			connect: (url: string): any => {
@@ -188,6 +188,8 @@ export class IobrokerConnection {
 		instance: string,
 		logsCount: number,
 	): Promise<any> {
+		// Hole Logs vom aktuellen Host (es gibt nur einen Host pro ioBroker System)
+		// Die Instance (z.B. javascript.0, admin.1) steht im Log-Text selbst
 		let log = await this.connection?.getLogs(this.currentHost, logsCount || 200);
 		let logObj: (
 			| {
@@ -202,8 +204,11 @@ export class IobrokerConnection {
 		)[] = [];
 		if (Array.isArray(log)) {
 			logObj = (log ?? []).map((line) => {
+				// Regex Pattern zum Extrahieren der Instance aus den Logs
+				// Format: "2026-01-03 13:06:57.287  - [ANSI]level[ANSI]: instance.X (PID) [ARROW] message"
+				// ANSI-Codes und Pfeile (==>, <==, <=>) sind optional
 				const regex =
-					/^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})  - (?<ansi1>\x1b\[[0-9;]*m)(?<level>info|error|debug|warn)(?<ansi2>\x1b\[[0-9;]*m): (?<instance>\w+\.\d+) \((?<process>\d+)\) (==>|<==|<=>) (?<message>.*$)/gm;
+					/^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\s+-\s+(?:\x1b\[[0-9;]*m)?(?<level>info|error|debug|warn)(?:\x1b\[[0-9;]*m)?:\s+(?<instance>[\w-]+\.\d+)\s+\((?<process>\d+)\)\s*(?:(==>|<==|<=>)\s*)?(?<message>.*?)$/gm;
 				const match = regex.exec(String(line));
 				return !match
 					? undefined
@@ -217,10 +222,12 @@ export class IobrokerConnection {
 						};
 			});
 		}
+		// Filtere nach Level wenn angegeben
 		if (level) {
 			logObj = logObj.filter((obj) => obj?.level === level);
 		}
-		if (instance) {
+		// Filtere nach Instance wenn angegeben (bei "Any" oder "" wird nicht gefiltert)
+		if (instance && instance !== 'Any') {
 			logObj = logObj.filter((obj) => obj?.instance === instance);
 		}
 		return logObj.filter((obj) => obj);
@@ -252,7 +259,7 @@ export class IobrokerConnection {
 		if (enums) {
 			let enumsArray = Object.values(enums);
 			for (let e = 0; e < enumsArray.length; e++) {
-				const enumObj = enumsArray[e];
+				const enumObj = enumsArray[e] as any;
 				const oneEnum: EnumResponse = {
 					id: enumObj._id,
 					name:
@@ -349,7 +356,7 @@ export class IobrokerConnection {
 		});
 		if (result) {
 			let resultArray = Object.values(result);
-			resultArray.map((row) => {
+			resultArray.map((row: any) => {
 				const namespace = row._id.replace('system.adapter.', '');
 				let name = this.getText(row.common.titleLang || row.common.title || '', 'en') || namespace;
 				const [adapterName, instance] = namespace.split('.');
