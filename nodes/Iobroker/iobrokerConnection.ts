@@ -90,6 +90,20 @@ export function getFatalSocketError(error: unknown): Error | undefined {
   return undefined;
 }
 
+export function getConnectionTimeoutError(
+  host: string,
+  port: number,
+  timeoutMs: number,
+  authenticated: boolean,
+): Error {
+  const authenticationHint = authenticated
+    ? ' Check the username and password.'
+    : ' If ioBroker Admin authentication is enabled, enter a username and password.';
+  return new Error(
+    `ioBroker connection to ${host}:${port} timed out after ${timeoutMs / 1000} seconds.${authenticationHint}`,
+  );
+}
+
 export async function getIobrokerAccessToken(
   host: string,
   port: number,
@@ -132,8 +146,36 @@ export function connectIobroker(
   token?: string,
   protocol: IobrokerProtocol = 'http',
 ): Promise<AdminConnection> {
+  return openIobrokerConnection(host, port, token, protocol, 3, 15000);
+}
+
+function openIobrokerConnection(
+  host: string,
+  port: number,
+  token: string | undefined,
+  protocol: IobrokerProtocol,
+  connectMaxAttempt: number,
+  timeoutMs: number,
+): Promise<AdminConnection> {
   return new Promise((resolve, reject) => {
     prepareIobrokerNodeEnvironment(host, port, protocol);
+    let socketClient: SocketClient | undefined;
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const finish = (error?: Error, connection?: AdminConnection): void => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      if (error) {
+        socketClient?.destroy();
+        reject(error);
+      } else if (connection) {
+        resolve(connection);
+      }
+    };
+    timeout = setTimeout(() => {
+      finish(getConnectionTimeoutError(host, port, timeoutMs, Boolean(token)));
+    }, timeoutMs);
     const iobsocket = new AdminConnection({
       host: host,
       port: port,
@@ -143,23 +185,22 @@ export function connectIobroker(
       doNotLoadACL: true,
       onProgress: (progress) => console.log(`Progress: ${progress}`),
       onReady: async (_objects) => {
-        resolve(iobsocket);
+        finish(undefined, iobsocket);
       },
       onLog: (message) => console.log(`Log: ${message.message}`),
       onError: (error) => {
         console.error(`Error: ${error}`);
+        const fatalError = getFatalSocketError(error);
+        if (fatalError) finish(fatalError);
       },
       connect: (url: string, options: { token?: string }): any => {
-        const socketClient = new SocketClient(); //socket.io
+        socketClient = new SocketClient(); //socket.io
         socketClient.on('reconnect', (error: any) => {
           console.error(`SocketClient error: ${error}`);
         });
         socketClient.on('error', (error: any) => {
           const fatalError = getFatalSocketError(error);
-          if (fatalError) {
-            socketClient.destroy();
-            reject(fatalError);
-          }
+          if (fatalError) finish(fatalError);
         });
         socketClient.connect(url.replace(/^http/, 'ws'), {
           name: 'n8nClient',
@@ -168,7 +209,7 @@ export function connectIobroker(
           connectTimeout: 5000,
           authTimeout: 5000,
           connectInterval: 1000,
-          connectMaxAttempt: 3,
+          connectMaxAttempt,
           token: options?.token,
           WebSocket,
         });
@@ -177,56 +218,14 @@ export function connectIobroker(
     });
   });
 }
+
 export function testConnectIobroker(
   host: string,
   port: number,
   token?: string,
   protocol: IobrokerProtocol = 'http',
 ): Promise<AdminConnection> {
-  return new Promise((resolve, reject) => {
-    prepareIobrokerNodeEnvironment(host, port, protocol);
-    const iobsocket = new AdminConnection({
-      host: host,
-      port: port,
-      protocol,
-      token,
-      doNotLoadAllObjects: true,
-      doNotLoadACL: true,
-      onProgress: (progress) => console.log(`Progress: ${progress}`),
-      onReady: async (_objects) => {
-        resolve(iobsocket);
-      },
-      onLog: (message) => console.log(`Log: ${message.message}`),
-      onError: (error) => {
-        console.error(`Error: ${error}`);
-      },
-      connect: (url: string, options: { token?: string }): any => {
-        const socketClient = new SocketClient();
-        socketClient.on('reconnect', (error: any) => {
-          console.error(`SocketClient error: ${error}`);
-        });
-        socketClient.on('error', (error: any) => {
-          const fatalError = getFatalSocketError(error);
-          if (fatalError) {
-            socketClient.destroy();
-            reject(fatalError);
-          }
-        });
-        socketClient.connect(url.replace(/^http/, 'ws'), {
-          name: 'n8nClient',
-          pongTimeout: 10000,
-          pingInterval: 5000,
-          connectTimeout: 5000,
-          authTimeout: 5000,
-          connectInterval: 1000,
-          connectMaxAttempt: 1,
-          token: options?.token,
-          WebSocket,
-        });
-        return socketClient;
-      },
-    });
-  });
+  return openIobrokerConnection(host, port, token, protocol, 1, 7500);
 }
 export class IobrokerConnection {
   connection: AdminConnection | null = null;

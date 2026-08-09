@@ -3,6 +3,7 @@ const test = require('node:test');
 
 const {
   IobrokerConnection,
+  getConnectionTimeoutError,
   getFatalSocketError,
   getIobrokerAccessToken,
   prepareIobrokerNodeEnvironment,
@@ -119,4 +120,15 @@ test('socket authentication errors are fatal regardless of their value type', ()
   assert.match(getFatalSocketError(new Error('Authenticate timeout')).message, /Authenticate timeout/);
   assert.equal(getFatalSocketError(undefined), undefined);
   assert.equal(getFatalSocketError({ code: 'temporary' }), undefined);
+});
+
+test('connection timeouts explain when credentials may be required', () => {
+  assert.equal(
+    getConnectionTimeoutError('iobroker.local', 8081, 15000, false).message,
+    'ioBroker connection to iobroker.local:8081 timed out after 15 seconds. If ioBroker Admin authentication is enabled, enter a username and password.',
+  );
+  assert.match(
+    getConnectionTimeoutError('iobroker.local', 8081, 7500, true).message,
+    /Check the username and password/,
+  );
 });

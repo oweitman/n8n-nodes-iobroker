@@ -38,6 +38,7 @@ export class IoBrokerTrigger implements INodeType {
 			{
 				name: 'iobrokerApi',
 				required: true,
+				testedBy: 'iobrokerConnectionTest',
 			},
 		],
 		usableAsTool: true,
@@ -188,14 +189,14 @@ export class IoBrokerTrigger implements INodeType {
 			},
 		},
 		credentialTest: {
-			async sshConnectionTest(
+			async iobrokerConnectionTest(
 				this: ICredentialTestFunctions,
 				credential: ICredentialsDecrypted,
 			): Promise<INodeCredentialTestResult> {
 				const credentials = credential.data as IDataObject;
 				const iobConnection = new IobrokerConnection();
 				try {
-					await iobConnection.connect(
+					await iobConnection.test(
 						credentials.host as string,
 						credentials.port as number,
 						credentials.username as string,

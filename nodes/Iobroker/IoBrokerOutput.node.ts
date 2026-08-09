@@ -34,6 +34,7 @@ export class IoBrokerOutput implements INodeType {
       {
         name: 'iobrokerApi',
         required: true,
+        testedBy: 'iobrokerConnectionTest',
       },
     ],
     usableAsTool: true,
@@ -158,14 +159,14 @@ export class IoBrokerOutput implements INodeType {
       },
     },
     credentialTest: {
-      async sshConnectionTest(
+      async iobrokerConnectionTest(
         this: ICredentialTestFunctions,
         credential: ICredentialsDecrypted,
       ): Promise<INodeCredentialTestResult> {
         const credentials = credential.data as IDataObject;
         const iobConnection = new IobrokerConnection();
         try {
-          await iobConnection.connect(
+          await iobConnection.test(
             credentials.host as string,
             credentials.port as number,
             credentials.username as string,
@@ -207,9 +208,10 @@ export class IoBrokerOutput implements INodeType {
       );
     } catch (error) {
       console.error(`Error: ${error}`);
+      const connectionError = error instanceof Error ? error.message : String(error);
       throw new NodeApiError(this.getNode(), error as JsonObject, {
-        message: 'Connection error, please check host and port.',
-        description: 'Please check host and port.',
+        message: `ioBroker connection failed: ${connectionError}`,
+        description: 'Check the host, port, protocol, and ioBroker credentials.',
       });
     }
     const items = this.getInputData();

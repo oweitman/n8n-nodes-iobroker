@@ -75,7 +75,10 @@ Writes data to ioBroker.
 - **username/password** – optional credentials when authentication is enabled in the ioBroker
   Admin instance
 
-The credential test attempts a connection. On success you’ll see **“Connection successful!”**
+Use **Test connection** in the n8n credential editor to verify the settings. On success you’ll see
+**“Connection successful!”** The test stops after 7.5 seconds; regular node connections stop after
+15 seconds instead of waiting indefinitely. A timeout without configured credentials points out
+that the ioBroker Admin instance may require a username and password.
 
 When username and password are configured, the node requests an OAuth access token from the Admin
 instance and uses it for the WebSocket connection. Both fields must be provided together.
