@@ -292,7 +292,7 @@ export class IoBrokerTrigger implements INodeType {
 			const fileName = this.getNodeParameter('fileName') as string;
 			const withContent = this.getNodeParameter('withContent') as boolean;
 
-			
+
 			iobConnection.registerFileHandler(oid, filePattern, callback);
 		} */
 
