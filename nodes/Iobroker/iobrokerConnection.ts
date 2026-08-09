@@ -203,7 +203,7 @@ export class IobrokerConnection {
     if (Array.isArray(log)) {
       logObj = (log ?? []).map((line) => {
         const regex =
-          /^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})  - (?<ansi1>\x1b\[[0-9;]*m)(?<level>info|error|debug|warn)(?<ansi2>\x1b\[[0-9;]*m): (?<instance>\w+\.\d+) \((?<process>\d+)\) (==>|<==|<=>) (?<message>.*$)/gm;
+          /^(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\s+-\s+(?:\x1b\[[0-9;]*m)*(?<level>info|error|debug|warn)(?:\x1b\[[0-9;]*m)*:\s+(?<instance>[\w-]+\.\d+)\s+\((?<process>\d+)\)\s*(?:(?:==>|<==|<=>)\s*)?(?<message>.*)$/;
         const match = regex.exec(String(line));
         return !match
           ? undefined
