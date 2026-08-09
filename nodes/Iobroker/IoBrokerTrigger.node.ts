@@ -7,7 +7,6 @@ import {
 	// type IBinaryData,
 	type ILoadOptionsFunctions,
 	type INodePropertyOptions,
-	NodeConnectionType,
 	ICredentialTestFunctions,
 	ICredentialsDecrypted,
 	INodeCredentialTestResult,
@@ -34,7 +33,7 @@ export class IoBrokerTrigger implements INodeType {
 			name: 'ioBroker Input Trigger',
 		},
 		inputs: [],
-		outputs: [NodeConnectionType.Main], // NodeConnectionType.Main
+		outputs: ['main'],
 		credentials: [
 			{
 				name: 'iobrokerApi',

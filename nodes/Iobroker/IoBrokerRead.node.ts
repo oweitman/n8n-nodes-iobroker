@@ -12,7 +12,7 @@ import type {
   INodeCredentialTestResult,
   ICredentialsDecrypted,
 } from 'n8n-workflow';
-import { NodeApiError, NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import {} from '@iobroker/types';
 import { IobrokerConnection } from './iobrokerConnection';
 
@@ -28,8 +28,8 @@ export class IoBrokerRead implements INodeType {
     defaults: {
       name: 'ioBroker Read',
     },
-    inputs: [NodeConnectionType.Main], // NodeConnectionType.Main
-    outputs: [NodeConnectionType.Main], // NodeConnectionType.Main
+    inputs: ['main'],
+    outputs: ['main'],
     credentials: [
       {
         name: 'iobrokerApi',
