@@ -129,8 +129,7 @@ export async function getIobrokerAccessToken(
     body,
   });
   const data = (await response.json().catch(() => undefined)) as
-    | { access_token?: string; error?: string; error_description?: string }
-    | undefined;
+    { access_token?: string; error?: string; error_description?: string } | undefined;
 
   if (!response.ok || !data?.access_token) {
     const reason = data?.error_description || data?.error || `HTTP ${response.status}`;
@@ -187,7 +186,7 @@ function openIobrokerConnection(
       onReady: async (_objects) => {
         finish(undefined, iobsocket);
       },
-      onLog: (message) => console.log(`Log: ${message.message}`),
+      //onLog: (message) => console.log(`Log: ${message.message}`),
       onError: (error) => {
         console.error(`Error: ${error}`);
         const fatalError = getFatalSocketError(error);
@@ -239,9 +238,10 @@ export class IobrokerConnection {
     password = '',
     protocol: IobrokerProtocol = 'http',
   ): Promise<void> {
-    const token = username || password
-      ? await getIobrokerAccessToken(host, port, username, password, protocol)
-      : undefined;
+    const token =
+      username || password
+        ? await getIobrokerAccessToken(host, port, username, password, protocol)
+        : undefined;
     this.connection = await connectIobroker(host, port, token, protocol);
     await this.getHosts();
     this.connected = true;
@@ -253,9 +253,10 @@ export class IobrokerConnection {
     password = '',
     protocol: IobrokerProtocol = 'http',
   ): Promise<void> {
-    const token = username || password
-      ? await getIobrokerAccessToken(host, port, username, password, protocol)
-      : undefined;
+    const token =
+      username || password
+        ? await getIobrokerAccessToken(host, port, username, password, protocol)
+        : undefined;
     this.connection = await testConnectIobroker(host, port, token, protocol);
   }
 
