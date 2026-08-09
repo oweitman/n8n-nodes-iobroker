@@ -87,9 +87,9 @@ instance and uses it for the WebSocket connection. Both fields must be provided 
 
 ## Compatibility
 
-- **n8n:** v1.x (tested with current 1.x releases)
+- **n8n:** v2.x (tested with 2.33.7)
 - **ioBroker:** current stable releases
-- **Node.js:** as required by your n8n installation
+- **Node.js:** 20.15 or newer
 
 > If your setup differs (reverse proxy, custom ports/adapters), ensure `host`/`port` are reachable by **`IobrokerConnection.connect(host, port)`**.
 
@@ -219,6 +219,12 @@ instance and uses it for the WebSocket connection. Both fields must be provided 
 ---
 
 ## Version history
+
+- **0.6.0**
+  - Added authenticated ioBroker connections using OAuth access tokens
+  - Added bounded connection attempts, credential tests, and actionable timeout errors
+  - Improved device reads and support for common ioBroker log formats
+  - Updated the package for n8n v2
 
 - **0.1.0**
   - Initial public release

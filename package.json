@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-iobroker",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Community nodes for n8n  to integrate ioBroker into your workflows.",
   "keywords": [
     "n8n-community-node-package"
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/oweitman/n8n-nodes-iobroker.git"
+    "url": "git+https://github.com/oweitman/n8n-nodes-iobroker.git"
   },
   "engines": {
     "node": ">=20.15"
