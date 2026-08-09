@@ -69,12 +69,16 @@ Writes data to ioBroker.
 
 ## Credentials
 
+- **protocol** – `http` or `https`
 - **host** – hostname or IP of your ioBroker system
-- **port** – API/WebSocket port (e.g. **8087** for Admin Socket.IO; may differ by setup)
+- **port** – Admin API/WebSocket port (normally **8081**; may differ by setup)
+- **username/password** – optional credentials when authentication is enabled in the ioBroker
+  Admin instance
 
 The credential test attempts a connection. On success you’ll see **“Connection successful!”**
 
-> Note: If your `IobrokerConnection` requires authentication, add the necessary fields to the credential and adapt the connection code accordingly.
+When username and password are configured, the node requests an OAuth access token from the Admin
+instance and uses it for the WebSocket connection. Both fields must be provided together.
 
 ---
 

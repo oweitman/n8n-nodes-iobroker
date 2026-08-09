@@ -1,7 +1,10 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { IobrokerConnection } = require('../dist/nodes/Iobroker/iobrokerConnection.js');
+const {
+  IobrokerConnection,
+  getIobrokerAccessToken,
+} = require('../dist/nodes/Iobroker/iobrokerConnection.js');
 
 test('device reads tolerate missing common data and translated names', async () => {
   const iobroker = new IobrokerConnection();
@@ -66,4 +69,37 @@ test('log reads accept ioBroker log variants and apply optional filters', async 
   const errorLogs = await iobroker.getLogs('error', '', 200);
   assert.equal(errorLogs.length, 1);
   assert.equal(errorLogs[0].instance, 'my-adapter.2');
+});
+
+test('authentication requests an ioBroker OAuth token without exposing credentials in the URL', async () => {
+  let request;
+  const token = await getIobrokerAccessToken(
+    'iobroker.local',
+    8081,
+    'test user',
+    'secret&value',
+    'https',
+    async (url, options) => {
+      request = { url, options };
+      return new Response(JSON.stringify({ access_token: 'access-token' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+  );
+
+  assert.equal(token, 'access-token');
+  assert.equal(request.url, 'https://iobroker.local:8081/oauth/token');
+  assert.equal(request.options.method, 'POST');
+  assert.equal(request.url.includes('secret'), false);
+  assert.equal(request.options.body.get('username'), 'test user');
+  assert.equal(request.options.body.get('password'), 'secret&value');
+  assert.equal(request.options.body.get('client_id'), 'ioBroker');
+});
+
+test('authentication rejects incomplete credentials', async () => {
+  await assert.rejects(
+    getIobrokerAccessToken('iobroker.local', 8081, 'test', ''),
+    /Both username and password are required/,
+  );
 });

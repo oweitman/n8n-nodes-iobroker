@@ -177,7 +177,13 @@ export class IoBrokerTrigger implements INodeType {
 			async getInstances(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const credentials = await this.getCredentials('iobrokerApi');
 				const iobConnection = new IobrokerConnection();
-				await iobConnection.connect(credentials.host as string, credentials.port as number);
+				await iobConnection.connect(
+					credentials.host as string,
+					credentials.port as number,
+					credentials.username as string,
+					credentials.password as string,
+					credentials.protocol as 'http' | 'https',
+				);
 				return await iobConnection.getInstances();
 			},
 		},
@@ -189,7 +195,13 @@ export class IoBrokerTrigger implements INodeType {
 				const credentials = credential.data as IDataObject;
 				const iobConnection = new IobrokerConnection();
 				try {
-					await iobConnection.connect(credentials.host as string, credentials.port as number);
+					await iobConnection.connect(
+						credentials.host as string,
+						credentials.port as number,
+						credentials.username as string,
+						credentials.password as string,
+						credentials.protocol as 'http' | 'https',
+					);
 				} catch (error) {
 					const message = `Connection error: ${error.message}`;
 					return {
@@ -258,7 +270,13 @@ export class IoBrokerTrigger implements INodeType {
 
 		const credentials = await this.getCredentials('iobrokerApi');
 		iobConnection = new IobrokerConnection();
-		await iobConnection.connect(credentials.host as string, credentials.port as number);
+		await iobConnection.connect(
+			credentials.host as string,
+			credentials.port as number,
+			credentials.username as string,
+			credentials.password as string,
+			credentials.protocol as 'http' | 'https',
+		);
 
 		if (type === 'log') {
 			iobConnection.registerLogHandler(logHandler);

@@ -53,11 +53,57 @@ export type IobFileSubscription = {
   withContent?: boolean;
   fileHandler?: IobFileSubscriptionHandler;
 };
-export function connectIobroker(host: string, port: number): Promise<AdminConnection> {
+
+type IobrokerProtocol = 'http' | 'https';
+
+export async function getIobrokerAccessToken(
+  host: string,
+  port: number,
+  username: string,
+  password: string,
+  protocol: IobrokerProtocol = 'http',
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  if (!username || !password) {
+    throw new Error('Both username and password are required for ioBroker authentication.');
+  }
+
+  const body = new URLSearchParams({
+    grant_type: 'password',
+    username,
+    password,
+    stayloggedin: 'false',
+    client_id: 'ioBroker',
+  });
+  const response = await fetchImpl(`${protocol}://${host}:${port}/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  const data = (await response.json().catch(() => undefined)) as
+    | { access_token?: string; error?: string; error_description?: string }
+    | undefined;
+
+  if (!response.ok || !data?.access_token) {
+    const reason = data?.error_description || data?.error || `HTTP ${response.status}`;
+    throw new Error(`ioBroker authentication failed: ${reason}`);
+  }
+
+  return data.access_token;
+}
+
+export function connectIobroker(
+  host: string,
+  port: number,
+  token?: string,
+  protocol: IobrokerProtocol = 'http',
+): Promise<AdminConnection> {
   return new Promise((resolve, reject) => {
     const iobsocket = new AdminConnection({
       host: host,
       port: port,
+      protocol,
+      token,
       doNotLoadAllObjects: true,
       doNotLoadACL: true,
       onProgress: (progress) => console.log(`Progress: ${progress}`),
@@ -68,7 +114,7 @@ export function connectIobroker(host: string, port: number): Promise<AdminConnec
       onError: (error) => {
         console.error(`Error: ${error}`);
       },
-      connect: (url: string): any => {
+      connect: (url: string, options: { token?: string }): any => {
         const socketClient = new SocketClient(); //socket.io
         socketClient.on('reconnect', (error: any) => {
           console.error(`SocketClient error: ${error}`);
@@ -87,6 +133,7 @@ export function connectIobroker(host: string, port: number): Promise<AdminConnec
           authTimeout: 5000,
           connectInterval: 1000,
           connectMaxAttempt: 3,
+          token: options?.token,
           WebSocket,
         });
         return socketClient;
@@ -94,11 +141,18 @@ export function connectIobroker(host: string, port: number): Promise<AdminConnec
     });
   });
 }
-export function testConnectIobroker(host: string, port: number): Promise<AdminConnection> {
+export function testConnectIobroker(
+  host: string,
+  port: number,
+  token?: string,
+  protocol: IobrokerProtocol = 'http',
+): Promise<AdminConnection> {
   return new Promise((resolve, reject) => {
     const iobsocket = new AdminConnection({
       host: host,
       port: port,
+      protocol,
+      token,
       doNotLoadAllObjects: true,
       doNotLoadACL: true,
       onProgress: (progress) => console.log(`Progress: ${progress}`),
@@ -109,7 +163,7 @@ export function testConnectIobroker(host: string, port: number): Promise<AdminCo
       onError: (error) => {
         console.error(`Error: ${error}`);
       },
-      connect: (url: string): any => {
+      connect: (url: string, options: { token?: string }): any => {
         const socketClient = new SocketClient();
         socketClient.on('reconnect', (error: any) => {
           console.error(`SocketClient error: ${error}`);
@@ -128,6 +182,7 @@ export function testConnectIobroker(host: string, port: number): Promise<AdminCo
           authTimeout: 5000,
           connectInterval: 1000,
           connectMaxAttempt: 1,
+          token: options?.token,
           WebSocket,
         });
         return socketClient;
@@ -140,13 +195,31 @@ export class IobrokerConnection {
   connected: boolean = false;
   currentHost = '';
   currentHostname = '';
-  public async connect(host: string, port: number): Promise<void> {
-    this.connection = await connectIobroker(host, port);
+  public async connect(
+    host: string,
+    port: number,
+    username = '',
+    password = '',
+    protocol: IobrokerProtocol = 'http',
+  ): Promise<void> {
+    const token = username || password
+      ? await getIobrokerAccessToken(host, port, username, password, protocol)
+      : undefined;
+    this.connection = await connectIobroker(host, port, token, protocol);
     await this.getHosts();
     this.connected = true;
   }
-  public async test(host: string, port: number): Promise<void> {
-    this.connection = await testConnectIobroker(host, port);
+  public async test(
+    host: string,
+    port: number,
+    username = '',
+    password = '',
+    protocol: IobrokerProtocol = 'http',
+  ): Promise<void> {
+    const token = username || password
+      ? await getIobrokerAccessToken(host, port, username, password, protocol)
+      : undefined;
+    this.connection = await testConnectIobroker(host, port, token, protocol);
   }
 
   async getHosts(): Promise<any> {
