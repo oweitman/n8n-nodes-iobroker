@@ -27,6 +27,7 @@
     "lint": "eslint nodes credentials package.json",
     "lintfix": "eslint nodes credentials package.json --fix",
     "prepublishOnly": "npm run build && npm run lint -- --config eslint.config.prepublish.js",
+    "test": "npm run build && node --test test/*.test.js",
     "start": "npx n8n start"
   },
   "files": [

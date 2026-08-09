@@ -253,21 +253,20 @@ export class IobrokerConnection {
       let enumsArray = Object.values(enums);
       for (let e = 0; e < enumsArray.length; e++) {
         const enumObj = enumsArray[e];
+        if (!enumObj?._id) {
+          continue;
+        }
+        const common = enumObj.common;
         const oneEnum: EnumResponse = {
           id: enumObj._id,
-          name:
-            (language && enumObj.common
-              ? this.getText(enumObj.common.name, language)
-              : enumObj.common?.name) ||
-            enumObj._id.split('.').pop() ||
-            '',
-          color: enumObj.common.color,
-          icon: withIcons ? enumObj.common.icon : undefined,
+          name: this.getText(common?.name, language) || enumObj._id.split('.').pop() || '',
+          color: common?.color,
+          icon: withIcons ? common?.icon : undefined,
           items: [],
         };
         result.push(oneEnum);
-        if (enumObj?.common?.members) {
-          for (const member of enumObj.common.members) {
+        if (common?.members) {
+          for (const member of common.members) {
             let obj = objects[member];
             if (obj === undefined) {
               try {
@@ -278,23 +277,19 @@ export class IobrokerConnection {
               obj = objects[member];
             }
             if (obj) {
+              const itemCommon = obj.common;
               oneEnum.items.push({
                 id: member,
                 type: obj.type,
-                name:
-                  (language && obj.common
-                    ? this.getText(obj.common.name, language)
-                    : obj.common.name) ||
-                  member.split('.').pop() ||
-                  '',
-                color: obj.common?.color,
-                icon: withIcons ? obj.common?.icon : undefined,
-                stateType: obj.common?.type,
-                min: obj.common?.min,
-                max: obj.common?.max,
-                unit: obj.common?.unit,
-                role: obj.common?.role,
-                step: obj.common?.step,
+                name: this.getText(itemCommon?.name, language) || member.split('.').pop() || '',
+                color: itemCommon?.color,
+                icon: withIcons ? itemCommon?.icon : undefined,
+                stateType: itemCommon?.type,
+                min: itemCommon?.min,
+                max: itemCommon?.max,
+                unit: itemCommon?.unit,
+                role: itemCommon?.role,
+                step: itemCommon?.step,
               });
             }
           }
@@ -366,11 +361,17 @@ export class IobrokerConnection {
     }
     return instances;
   }
-  private getText(text: ioBroker.StringOrTranslated, language: ioBroker.Languages): string {
+  private getText(
+    text: ioBroker.StringOrTranslated | null | undefined,
+    language?: ioBroker.Languages,
+  ): string {
     if (typeof text === 'string') {
       return text;
     }
-    return text[language] || text.en || '';
+    if (!text) {
+      return '';
+    }
+    return (language ? text[language] : undefined) || text.en || '';
   }
   public destroy(): void {
     //this.connection?.destroy(); // does not exist
