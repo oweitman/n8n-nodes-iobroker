@@ -56,6 +56,40 @@ export type IobFileSubscription = {
 
 type IobrokerProtocol = 'http' | 'https';
 
+export function prepareIobrokerNodeEnvironment(
+  host: string,
+  port: number,
+  protocol: IobrokerProtocol,
+): void {
+  const runtime = globalThis as unknown as { location?: Partial<Location> };
+  runtime.location ||= {};
+  Object.assign(runtime.location, {
+    href: `${protocol}://${host}:${port}/`,
+    protocol: `${protocol}:`,
+    host: `${host}:${port}`,
+    hostname: host,
+    port: String(port),
+    pathname: '/',
+    search: '',
+    hash: '',
+    reload: runtime.location.reload || (() => undefined),
+  });
+}
+
+export function getFatalSocketError(error: unknown): Error | undefined {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const normalizedMessage = message.toLowerCase();
+  if (
+    normalizedMessage.includes('connection error. too many attempts') ||
+    normalizedMessage.includes('authenticate timeout') ||
+    normalizedMessage.includes('user not authorized') ||
+    normalizedMessage.includes('invalid token')
+  ) {
+    return new Error(message || 'ioBroker connection failed.');
+  }
+  return undefined;
+}
+
 export async function getIobrokerAccessToken(
   host: string,
   port: number,
@@ -99,6 +133,7 @@ export function connectIobroker(
   protocol: IobrokerProtocol = 'http',
 ): Promise<AdminConnection> {
   return new Promise((resolve, reject) => {
+    prepareIobrokerNodeEnvironment(host, port, protocol);
     const iobsocket = new AdminConnection({
       host: host,
       port: port,
@@ -120,9 +155,10 @@ export function connectIobroker(
           console.error(`SocketClient error: ${error}`);
         });
         socketClient.on('error', (error: any) => {
-          if (error.includes('connection error. too many attempts')) {
+          const fatalError = getFatalSocketError(error);
+          if (fatalError) {
             socketClient.destroy();
-            reject(error);
+            reject(fatalError);
           }
         });
         socketClient.connect(url.replace(/^http/, 'ws'), {
@@ -148,6 +184,7 @@ export function testConnectIobroker(
   protocol: IobrokerProtocol = 'http',
 ): Promise<AdminConnection> {
   return new Promise((resolve, reject) => {
+    prepareIobrokerNodeEnvironment(host, port, protocol);
     const iobsocket = new AdminConnection({
       host: host,
       port: port,
@@ -169,9 +206,10 @@ export function testConnectIobroker(
           console.error(`SocketClient error: ${error}`);
         });
         socketClient.on('error', (error: any) => {
-          if (error.includes('connection error. too many attempts')) {
+          const fatalError = getFatalSocketError(error);
+          if (fatalError) {
             socketClient.destroy();
-            reject(error);
+            reject(fatalError);
           }
         });
         socketClient.connect(url.replace(/^http/, 'ws'), {

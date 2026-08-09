@@ -3,7 +3,9 @@ const test = require('node:test');
 
 const {
   IobrokerConnection,
+  getFatalSocketError,
   getIobrokerAccessToken,
+  prepareIobrokerNodeEnvironment,
 } = require('../dist/nodes/Iobroker/iobrokerConnection.js');
 
 test('device reads tolerate missing common data and translated names', async () => {
@@ -102,4 +104,19 @@ test('authentication rejects incomplete credentials', async () => {
     getIobrokerAccessToken('iobroker.local', 8081, 'test', ''),
     /Both username and password are required/,
   );
+});
+
+test('Node environment provides browser location fields required by socket reauthentication', () => {
+  prepareIobrokerNodeEnvironment('iobroker.local', 8081, 'http');
+
+  assert.equal(globalThis.location.href, 'http://iobroker.local:8081/');
+  assert.equal(globalThis.location.search, '');
+  assert.equal(globalThis.location.hash, '');
+});
+
+test('socket authentication errors are fatal regardless of their value type', () => {
+  assert.match(getFatalSocketError('User not authorized').message, /User not authorized/);
+  assert.match(getFatalSocketError(new Error('Authenticate timeout')).message, /Authenticate timeout/);
+  assert.equal(getFatalSocketError(undefined), undefined);
+  assert.equal(getFatalSocketError({ code: 'temporary' }), undefined);
 });
