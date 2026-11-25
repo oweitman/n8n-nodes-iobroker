@@ -178,14 +178,18 @@ export class IoBrokerTrigger implements INodeType {
 			async getInstances(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const credentials = await this.getCredentials('iobrokerApi');
 				const iobConnection = new IobrokerConnection();
-				await iobConnection.connect(
-					credentials.host as string,
-					credentials.port as number,
-					credentials.username as string,
-					credentials.password as string,
-					credentials.protocol as 'http' | 'https',
-				);
-				return await iobConnection.getInstances();
+				try {
+					await iobConnection.connect(
+						credentials.host as string,
+						credentials.port as number,
+						credentials.username as string,
+						credentials.password as string,
+						credentials.protocol as 'http' | 'https',
+					);
+					return await iobConnection.getInstances();
+				} finally {
+					iobConnection.destroy();
+				}
 			},
 		},
 		credentialTest: {
@@ -210,7 +214,7 @@ export class IoBrokerTrigger implements INodeType {
 						message,
 					};
 				} finally {
-					//await iobConnection.disconnect(); // does not exist
+					iobConnection.destroy();
 				}
 				return {
 					status: 'OK',
@@ -339,6 +343,7 @@ export class IoBrokerTrigger implements INodeType {
 			} /* else if (type === 'file') {
 
 			} */
+			iobConnection.destroy();
 		}
 
 		async function manualTriggerFunction() {

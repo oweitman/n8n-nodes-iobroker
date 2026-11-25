@@ -267,14 +267,18 @@ export class IoBrokerRead implements INodeType {
       async getInstances(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
         const credentials = await this.getCredentials('iobrokerApi');
         const iobConnection = new IobrokerConnection();
-        await iobConnection.connect(
-          credentials.host as string,
-          credentials.port as number,
-          credentials.username as string,
-          credentials.password as string,
-          credentials.protocol as 'http' | 'https',
-        );
-        return await iobConnection.getInstances();
+        try {
+          await iobConnection.connect(
+            credentials.host as string,
+            credentials.port as number,
+            credentials.username as string,
+            credentials.password as string,
+            credentials.protocol as 'http' | 'https',
+          );
+          return await iobConnection.getInstances();
+        } finally {
+          iobConnection.destroy();
+        }
       },
     },
     credentialTest: {
@@ -299,7 +303,7 @@ export class IoBrokerRead implements INodeType {
             message,
           };
         } finally {
-          //await iobConnection.disconnect(); // does not exist
+          iobConnection.destroy();
         }
         return {
           status: 'OK',
@@ -333,127 +337,131 @@ export class IoBrokerRead implements INodeType {
         description: 'Check the host, port, protocol, and ioBroker credentials.',
       });
     }
+    try {
+      return await processItems(this, iobConnection);
+    } finally {
+      iobConnection.destroy();
+    }
+  }
+}
 
-    const items = this.getInputData();
+async function processItems(
+  ctx: IExecuteFunctions,
+  iobConnection: IobrokerConnection,
+): Promise<INodeExecutionData[][]> {
+  const items = ctx.getInputData();
 
-    let type: 'state' | 'object' | 'file' | 'log' | 'rooms' | 'functions' | 'devices' | undefined;
+  let type: 'state' | 'object' | 'file' | 'log' | 'rooms' | 'functions' | 'devices' | undefined;
 
-    const result: INodeExecutionData[] = [];
+  const result: INodeExecutionData[] = [];
 
-    for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-      try {
-        type = this.getNodeParameter('type', itemIndex, '') as
-          | 'state'
-          | 'object'
-          | 'file'
-          | 'log'
-          | 'rooms'
-          | 'functions'
-          | 'devices';
-        if (type === 'object') {
-          const oid = this.getNodeParameter('oid', itemIndex, '') as string;
-          const object = await iobConnection.getObject(oid);
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    try {
+      type = ctx.getNodeParameter('type', itemIndex, '') as
+        'state' | 'object' | 'file' | 'log' | 'rooms' | 'functions' | 'devices';
+      if (type === 'object') {
+        const oid = ctx.getNodeParameter('oid', itemIndex, '') as string;
+        const object = await iobConnection.getObject(oid);
+        result.push({
+          json: { [oid]: (object as unknown as IDataObject) || { error: 'Object not found' } },
+          pairedItem: itemIndex,
+        });
+      } else if (type === 'state') {
+        const oid = ctx.getNodeParameter('oid', itemIndex, '') as string;
+        const state = await iobConnection.getState(oid);
+        result.push({
+          json: { [oid]: (state as unknown as IDataObject) || { error: 'State not found' } },
+          pairedItem: itemIndex,
+        });
+      } else if (type === 'file') {
+        const oid = ctx.getNodeParameter('oid', itemIndex, '') as string;
+        const fileName = ctx.getNodeParameter('fileName', itemIndex, '') as string;
+        const file = await iobConnection.readFile(oid, fileName);
+        result.push({
+          json: {
+            fileName,
+            mimeType: file?.mimeType || undefined,
+            content: file && typeof file.file === 'string' ? file.file : undefined,
+          },
+          binary:
+            file?.file && typeof file.file !== 'string'
+              ? { file: file.file as unknown as IBinaryData }
+              : undefined,
+          pairedItem: itemIndex,
+        });
+      } else if (type === 'log') {
+        const level = ctx.getNodeParameter('level', itemIndex, '') as ioBroker.LogLevel;
+        const instance = ctx.getNodeParameter('instance', itemIndex, '') as string;
+        const logsCount = ctx.getNodeParameter('logsCount', itemIndex, '') as number;
+
+        const messages = await iobConnection.getLogs(level, instance, logsCount || 200);
+        result.push({
+          json: { logs: messages },
+          pairedItem: itemIndex,
+        });
+      } else if (type === 'rooms') {
+        const language = ctx.getNodeParameter('language', itemIndex, 'de') as ioBroker.Languages;
+        const withIcons = ctx.getNodeParameter('withIcons', itemIndex, false) as boolean;
+        const ignoreEmptyItems = ctx.getNodeParameter(
+          'ignoreEmptyItems',
+          itemIndex,
+          false,
+        ) as boolean;
+        const enums = await iobConnection.readEnum('rooms', language, withIcons);
+        if (ignoreEmptyItems) {
           result.push({
-            json: { [oid]: (object as unknown as IDataObject) || { error: 'Object not found' } },
+            json: { enums: enums.filter((e) => e.items.length) },
             pairedItem: itemIndex,
           });
-        } else if (type === 'state') {
-          const oid = this.getNodeParameter('oid', itemIndex, '') as string;
-          const state = await iobConnection.getState(oid);
-          result.push({
-            json: { [oid]: (state as unknown as IDataObject) || { error: 'State not found' } },
-            pairedItem: itemIndex,
-          });
-        } else if (type === 'file') {
-          const oid = this.getNodeParameter('oid', itemIndex, '') as string;
-          const fileName = this.getNodeParameter('fileName', itemIndex, '') as string;
-          const file = await iobConnection.readFile(oid, fileName);
-          result.push({
-            json: {
-              fileName,
-              mimeType: file?.mimeType || undefined,
-              content: file && typeof file.file === 'string' ? file.file : undefined,
-            },
-            binary:
-              file?.file && typeof file.file !== 'string'
-                ? { file: file.file as unknown as IBinaryData }
-                : undefined,
-            pairedItem: itemIndex,
-          });
-        } else if (type === 'log') {
-          const level = this.getNodeParameter('level', itemIndex, '') as ioBroker.LogLevel;
-          const instance = this.getNodeParameter('instance', itemIndex, '') as string;
-          const logsCount = this.getNodeParameter('logsCount', itemIndex, '') as number;
-
-          const messages = await iobConnection.getLogs(level, instance, logsCount || 200);
-          result.push({
-            json: { logs: messages },
-            pairedItem: itemIndex,
-          });
-        } else if (type === 'rooms') {
-          const language = this.getNodeParameter('language', itemIndex, 'de') as ioBroker.Languages;
-          const withIcons = this.getNodeParameter('withIcons', itemIndex, false) as boolean;
-          const ignoreEmptyItems = this.getNodeParameter(
-            'ignoreEmptyItems',
-            itemIndex,
-            false,
-          ) as boolean;
-          const enums = await iobConnection.readEnum('rooms', language, withIcons);
-          if (ignoreEmptyItems) {
-            result.push({
-              json: { enums: enums.filter((e) => e.items.length) },
-              pairedItem: itemIndex,
-            });
-          } else {
-            result.push({ json: { enums }, pairedItem: itemIndex });
-          }
-        } else if (type === 'functions') {
-          const language = this.getNodeParameter('language', itemIndex, 'de') as ioBroker.Languages;
-          const withIcons = this.getNodeParameter('withIcons', itemIndex, false) as boolean;
-          const ignoreEmptyItems = this.getNodeParameter(
-            'ignoreEmptyItems',
-            itemIndex,
-            false,
-          ) as boolean;
-          const enums = await iobConnection.readEnum('functions', language, withIcons);
-          if (ignoreEmptyItems) {
-            result.push({
-              json: { enums: enums.filter((e) => e.items.length) },
-              pairedItem: itemIndex,
-            });
-          } else {
-            result.push({ json: { enums }, pairedItem: itemIndex });
-          }
-        } else if (type === 'devices') {
-          console.log('iob read execute devices start');
-          const language = this.getNodeParameter('language', itemIndex, 'de') as ioBroker.Languages;
-          const devices = await iobConnection.readEnum('devices', language);
-          result.push({
-            json: { devices: [devices] },
-            pairedItem: itemIndex,
-          });
-          console.log('iob read execute devices end');
-        }
-      } catch (error) {
-        // This node should never fail, but we want to showcase how
-        // to handle errors.
-        if (this.continueOnFail()) {
-          result.push({ json: this.getInputData(itemIndex)[0].json, error, pairedItem: itemIndex });
         } else {
-          // Adding `itemIndex` allows other workflows to handle this error
-          if (error.context) {
-            // If the error thrown already contains the context property,
-            // only append the itemIndex
-            error.context.itemIndex = itemIndex;
-            throw error;
-          }
-          throw new NodeOperationError(this.getNode(), error, {
-            itemIndex,
-          });
+          result.push({ json: { enums }, pairedItem: itemIndex });
         }
+      } else if (type === 'functions') {
+        const language = ctx.getNodeParameter('language', itemIndex, 'de') as ioBroker.Languages;
+        const withIcons = ctx.getNodeParameter('withIcons', itemIndex, false) as boolean;
+        const ignoreEmptyItems = ctx.getNodeParameter(
+          'ignoreEmptyItems',
+          itemIndex,
+          false,
+        ) as boolean;
+        const enums = await iobConnection.readEnum('functions', language, withIcons);
+        if (ignoreEmptyItems) {
+          result.push({
+            json: { enums: enums.filter((e) => e.items.length) },
+            pairedItem: itemIndex,
+          });
+        } else {
+          result.push({ json: { enums }, pairedItem: itemIndex });
+        }
+      } else if (type === 'devices') {
+        console.log('iob read execute devices start');
+        const language = ctx.getNodeParameter('language', itemIndex, 'de') as ioBroker.Languages;
+        const devices = await iobConnection.readEnum('devices', language);
+        result.push({
+          json: { devices: [devices] },
+          pairedItem: itemIndex,
+        });
+        console.log('iob read execute devices end');
+      }
+    } catch (error) {
+      // This node should never fail, but we want to showcase how
+      // to handle errors.
+      if (ctx.continueOnFail()) {
+        result.push({ json: ctx.getInputData(itemIndex)[0].json, error, pairedItem: itemIndex });
+      } else {
+        // Adding `itemIndex` allows other workflows to handle this error
+        if (error.context) {
+          // If the error thrown already contains the context property,
+          // only append the itemIndex
+          error.context.itemIndex = itemIndex;
+          throw error;
+        }
+        throw new NodeOperationError(ctx.getNode(), error, {
+          itemIndex,
+        });
       }
     }
-
-    return [result];
   }
+
+  return [result];
 }
