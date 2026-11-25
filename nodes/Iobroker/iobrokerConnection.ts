@@ -139,12 +139,17 @@ export async function getIobrokerAccessToken(
   return data.access_token;
 }
 
+export interface IobrokerSocket {
+  connection: AdminConnection;
+  socketClient: SocketClient;
+}
+
 export function connectIobroker(
   host: string,
   port: number,
   token?: string,
   protocol: IobrokerProtocol = 'http',
-): Promise<AdminConnection> {
+): Promise<IobrokerSocket> {
   return openIobrokerConnection(host, port, token, protocol, 3, 15000);
 }
 
@@ -155,7 +160,7 @@ function openIobrokerConnection(
   protocol: IobrokerProtocol,
   connectMaxAttempt: number,
   timeoutMs: number,
-): Promise<AdminConnection> {
+): Promise<IobrokerSocket> {
   return new Promise((resolve, reject) => {
     prepareIobrokerNodeEnvironment(host, port, protocol);
     let socketClient: SocketClient | undefined;
@@ -166,10 +171,10 @@ function openIobrokerConnection(
       settled = true;
       if (timeout) clearTimeout(timeout);
       if (error) {
-        socketClient?.destroy();
+        closeSocketClient(socketClient);
         reject(error);
-      } else if (connection) {
-        resolve(connection);
+      } else if (connection && socketClient) {
+        resolve({ connection, socketClient });
       }
     };
     timeout = setTimeout(() => {
@@ -223,11 +228,31 @@ export function testConnectIobroker(
   port: number,
   token?: string,
   protocol: IobrokerProtocol = 'http',
-): Promise<AdminConnection> {
+): Promise<IobrokerSocket> {
   return openIobrokerConnection(host, port, token, protocol, 1, 7500);
+}
+
+/**
+ * Closes the underlying WebSocket for good: no reconnect, all timers cleared.
+ * SocketClient.close() alone schedules a reconnect, which keeps the connection
+ * (and the socket on the ioBroker admin side) alive forever.
+ */
+function closeSocketClient(socketClient?: SocketClient | null): void {
+  if (!socketClient) return;
+  try {
+    socketClient.close(true);
+  } catch {
+    // ignore
+  }
+  try {
+    socketClient.destroy();
+  } catch {
+    // ignore
+  }
 }
 export class IobrokerConnection {
   connection: AdminConnection | null = null;
+  private socketClient: SocketClient | null = null;
   connected: boolean = false;
   currentHost = '';
   currentHostname = '';
@@ -242,7 +267,9 @@ export class IobrokerConnection {
       username || password
         ? await getIobrokerAccessToken(host, port, username, password, protocol)
         : undefined;
-    this.connection = await connectIobroker(host, port, token, protocol);
+    const socket = await connectIobroker(host, port, token, protocol);
+    this.connection = socket.connection;
+    this.socketClient = socket.socketClient;
     await this.getHosts();
     this.connected = true;
   }
@@ -257,7 +284,9 @@ export class IobrokerConnection {
       username || password
         ? await getIobrokerAccessToken(host, port, username, password, protocol)
         : undefined;
-    this.connection = await testConnectIobroker(host, port, token, protocol);
+    const socket = await testConnectIobroker(host, port, token, protocol);
+    this.connection = socket.connection;
+    this.socketClient = socket.socketClient;
   }
 
   async getHosts(): Promise<any> {
@@ -484,7 +513,15 @@ export class IobrokerConnection {
     }
     return (language ? text[language] : undefined) || text.en || '';
   }
+  /**
+   * Releases the connection. Must be called after every execute()/loadOptions()/credentialTest()
+   * and when a trigger node is closed, otherwise every run leaves an open WebSocket on the
+   * ioBroker admin adapter (connections pile up until the adapter runs out of memory).
+   */
   public destroy(): void {
-    //this.connection?.destroy(); // does not exist
+    closeSocketClient(this.socketClient);
+    this.socketClient = null;
+    this.connection = null;
+    this.connected = false;
   }
 }
